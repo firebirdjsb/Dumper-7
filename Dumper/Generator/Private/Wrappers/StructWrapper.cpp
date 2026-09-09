@@ -1,6 +1,21 @@
 #include "Wrappers/StructWrapper.h"
 #include "Managers/MemberManager.h"
 
+namespace
+{
+    bool IsUnrealStructTypeSafe(const UEStruct& Struct, EClassCastFlags TypeFlag)
+    {
+        if (!Struct.GetAddress())
+            return false;
+
+        const UEClass StructClass = Struct.GetClass();
+        if (!StructClass.GetAddress())
+            return false;
+
+        return StructClass.IsType(TypeFlag);
+    }
+}
+
 StructWrapper::StructWrapper(const PredefinedStruct* const Predef)
     : PredefStruct(Predef), InfoHandle()
 {
@@ -94,7 +109,7 @@ bool StructWrapper::IsFinal() const
 
 bool StructWrapper::IsClass() const
 {
-    return bIsUnrealStruct ? Struct.IsA(EClassCastFlags::Class) : PredefStruct->bIsClass;
+    return bIsUnrealStruct ? IsUnrealStructTypeSafe(Struct, EClassCastFlags::Class) : PredefStruct->bIsClass;
 }
 
 bool StructWrapper::IsUnion() const
@@ -104,14 +119,14 @@ bool StructWrapper::IsUnion() const
 
 bool StructWrapper::IsFunction() const
 {
-    return bIsUnrealStruct && Struct.IsA(EClassCastFlags::Function);
+    return bIsUnrealStruct && IsUnrealStructTypeSafe(Struct, EClassCastFlags::Function);
 }
 
 bool StructWrapper::IsInterface() const
 {
     static UEClass InterfaceClass = ObjectArray::FindClassFast("Interface");
 
-    return bIsUnrealStruct && Struct.IsA(EClassCastFlags::Class) && Struct.HasType(InterfaceClass);
+    return bIsUnrealStruct && IsUnrealStructTypeSafe(Struct, EClassCastFlags::Class) && Struct.HasType(InterfaceClass);
 }
 
 bool StructWrapper::IsExactClassUObject() const
