@@ -87,5 +87,61 @@ if ($matches -lt 3) { throw "Expected at least 3 ObjectArray bounds checks, foun
 $oa = $oa.Replace($oldBounds, 'Index < 0 || Index >= Num()')
 Set-Content -Path $oaPath -Value $oa -NoNewline
 
-Write-Host 'Applied Quarry dependency/null guards and ObjectArray >= bounds fix.'
-git diff -- Dumper/Generator/Private/Managers/PackageManager.cpp Dumper/Engine/Private/Unreal/ObjectArray.cpp
+$swPath = 'Dumper\Generator\Private\Wrappers\StructWrapper.cpp'
+$sw = Get-Content -Raw $swPath
+
+$oldIncludes = @'
+#include "Wrappers/StructWrapper.h"
+#include "Managers/MemberManager.h"
+'@
+$newIncludes = @'
+#include "Wrappers/StructWrapper.h"
+#include "Managers/MemberManager.h"
+#include "OffsetFinder/Offsets.h"
+#include "Platform.h"
+'@
+if (-not $sw.Contains($oldIncludes)) { throw 'StructWrapper include patch context not found.' }
+$sw = $sw.Replace($oldIncludes, $newIncludes)
+
+$oldTypeGuard = @'
+    bool IsUnrealStructTypeSafe(const UEStruct& Struct, EClassCastFlags TypeFlag)
+    {
+        if (!Struct.GetAddress())
+            return false;
+
+        const UEClass StructClass = Struct.GetClass();
+        if (!StructClass.GetAddress())
+            return false;
+
+        return StructClass.IsType(TypeFlag);
+    }
+'@
+$newTypeGuard = @'
+    bool IsUnrealStructTypeSafe(const UEStruct& Struct, EClassCastFlags TypeFlag)
+    {
+        const auto* StructAddress = static_cast<const uint8*>(Struct.GetAddress());
+        if (!StructAddress || Platform::IsBadReadPtr(StructAddress))
+            return false;
+
+        const auto* ClassFieldAddress = StructAddress + Off::UObject::Class;
+        if (Platform::IsBadReadPtr(ClassFieldAddress))
+            return false;
+
+        const UEClass StructClass = Struct.GetClass();
+        const auto* StructClassAddress = static_cast<const uint8*>(StructClass.GetAddress());
+        if (!StructClassAddress || Platform::IsBadReadPtr(StructClassAddress))
+            return false;
+
+        const auto* CastFlagsAddress = StructClassAddress + Off::UClass::CastFlags;
+        if (Platform::IsBadReadPtr(CastFlagsAddress))
+            return false;
+
+        return StructClass.IsType(TypeFlag);
+    }
+'@
+if (-not $sw.Contains($oldTypeGuard)) { throw 'StructWrapper stale UClass guard context not found.' }
+$sw = $sw.Replace($oldTypeGuard, $newTypeGuard)
+Set-Content -Path $swPath -Value $sw -NoNewline
+
+Write-Host 'Applied Quarry dependency guards, ObjectArray bounds fix, and stale UClass readability guards.'
+git diff -- Dumper/Generator/Private/Managers/PackageManager.cpp Dumper/Engine/Private/Unreal/ObjectArray.cpp Dumper/Generator/Private/Wrappers/StructWrapper.cpp
