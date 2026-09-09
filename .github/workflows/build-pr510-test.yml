@@ -21,15 +21,15 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Build Release x64
+      - name: Build Release x64 with map
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Continue'
           Write-Host 'Trying the project-native v142 toolset...'
-          & msbuild 'Dumper\Dumper.vcxproj' /m /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v142
+          & msbuild 'Dumper\Dumper.vcxproj' /m /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v142 /p:GenerateMapFile=true /p:MapFileName=Dumper-7.map
           if ($LASTEXITCODE -ne 0) {
             Write-Host 'v142 build failed or is unavailable; retrying with v143...'
-            & msbuild 'Dumper\Dumper.vcxproj' /m /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
+            & msbuild 'Dumper\Dumper.vcxproj' /m /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /p:GenerateMapFile=true /p:MapFileName=Dumper-7.map
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
@@ -42,6 +42,7 @@ jobs:
             exit 1
           }
           $dlls | ForEach-Object { Write-Host $_.FullName }
+          Get-ChildItem -Path . -Recurse -File -Filter '*.map' | ForEach-Object { Write-Host $_.FullName }
 
       - name: Stage Dumper DLL
         shell: pwsh
@@ -58,6 +59,8 @@ jobs:
           Copy-Item $dll.FullName 'artifact\Dumper-7-PR510-x64.dll'
           $pdb = [System.IO.Path]::ChangeExtension($dll.FullName, '.pdb')
           if (Test-Path $pdb) { Copy-Item $pdb 'artifact\Dumper-7-PR510-x64.pdb' }
+          $map = Get-ChildItem -Path . -Recurse -File -Filter 'Dumper-7.map' | Select-Object -First 1
+          if ($map) { Copy-Item $map.FullName 'artifact\Dumper-7-PR510-x64.map' }
           Get-ChildItem artifact
 
       - name: Upload test build
