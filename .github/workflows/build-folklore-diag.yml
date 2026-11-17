@@ -1,0 +1,29 @@
+name: Folklore Hunter Diagnostic DLL
+on:
+  workflow_dispatch:
+  push:
+    branches: [diagnostics/folklore-hunter-ue55]
+    paths:
+      - 'Dumper/**'
+      - '.github/workflows/build-folklore-diag.yml'
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: microsoft/setup-msbuild@v2
+      - name: Build Release x64
+        shell: pwsh
+        run: |
+          msbuild .\Dumper\Dumper.vcxproj /m /p:Configuration=Release /p:Platform=x64 /p:WarningLevel=0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload DLL, PDB, map
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dumper-7-FolkloreHunter-UE55-Diagnostics
+          path: |
+            Dumper/x64/Release/Dumper-7.dll
+            Dumper/x64/Release/Dumper-7.pdb
+            Dumper/x64/Release/Dumper-7.map
+          if-no-files-found: error

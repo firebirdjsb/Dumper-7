@@ -6,6 +6,7 @@
 #include "Managers/DependencyManager.h"
 #include "Managers/MemberManager.h"
 #include "HashStringTable.h"
+#include "DumperDiagnostics.h"
 
 
 namespace fs = std::filesystem;
@@ -31,10 +32,14 @@ concept GeneratorImplementation = requires(GeneratorType t)
     requires(std::same_as<decltype(GeneratorType::Subfolder), fs::path>);
     
     /* Require static functions */
-    GeneratorType::Generate();
+    DumperDiagnostics::Mark("write C++ SDK files");
+        GeneratorType::Generate();
+        DumperDiagnostics::Mark("generator returned");
 
-    GeneratorType::InitPredefinedMembers();
-    GeneratorType::InitPredefinedFunctions();
+    DumperDiagnostics::Mark("init predefined members");
+        GeneratorType::InitPredefinedMembers();
+    DumperDiagnostics::Mark("init predefined functions");
+        GeneratorType::InitPredefinedFunctions();
 };
 
 class Generator
@@ -63,25 +68,36 @@ public:
     { 
         if (DumperFolder.empty())
         {
+            DumperDiagnostics::Mark("setup output folder");
             if (!SetupDumperFolder())
                 return;
 
+            DumperDiagnostics::Mark("output folder ready");
             if (!bDumpedGObjects)
             {
                 bDumpedGObjects = true;
+                DumperDiagnostics::Mark("dump object names");
                 ObjectArray::DumpObjects(DumperFolder);
+                DumperDiagnostics::Mark("object names complete");
 
                 if (Settings::Internal::bUseFProperty)
+                    {
+                    DumperDiagnostics::Mark("dump properties");
                     ObjectArray::DumpObjectsWithProperties(DumperFolder);
+                    DumperDiagnostics::Mark("property dump complete");
+                }
             }
 
             if (!bDumepdEditorOnlyMetadata)
             {
                 bDumepdEditorOnlyMetadata = true;
+                DumperDiagnostics::Mark("dump editor-only metadata");
                 DumpEditorOnlyMetadata(DumperFolder);
+                DumperDiagnostics::Mark("editor-only metadata complete");
             }
         }
 
+        DumperDiagnostics::Mark("setup generator folders");
         if (!SetupFolders(GeneratorType::MainFolderName, GeneratorType::MainFolder, GeneratorType::SubfolderName, GeneratorType::Subfolder))
             return;
 

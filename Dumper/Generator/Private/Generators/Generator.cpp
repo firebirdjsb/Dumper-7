@@ -7,6 +7,7 @@
 
 #include "HashStringTable.h"
 #include "Utils.h"
+#include "DumperDiagnostics.h"
 
 #include "Platform.h"
 #include "Json/json.hpp"
@@ -198,8 +199,10 @@ void DumpEditorOnlyMetadata(const fs::path& DumperFolder)
 	MetadataJson["GameName"] = Settings::Generator::GameName;
 	MetadataJson["GameVersion"] = Settings::Generator::GameVersion;
 
+	unsigned long long Ordinal = 0;
 	for (UEObject Obj : ObjectArray())
 	{
+		DumperDiagnostics::SetOrdinal(++Ordinal);
 		if (!Obj.IsA(EClassCastFlags::Struct))
 			continue;
 

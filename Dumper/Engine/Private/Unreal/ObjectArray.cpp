@@ -7,6 +7,7 @@
 #include "Unreal/ObjectArray.h"
 #include "OffsetFinder/Offsets.h"
 #include "Utils.h"
+#include "DumperDiagnostics.h"
 
 #include "Platform.h"
 
@@ -414,8 +415,10 @@ void ObjectArray::DumpObjects(const fs::path& Path, bool bWithPathname)
 	DumpStream << (!Settings::Generator::GameVersion.empty() && !Settings::Generator::GameName.empty() ? (Settings::Generator::GameVersion + '-' + Settings::Generator::GameName) + "\n\n" : "");
 	DumpStream << "Count: " << Num() << "\n\n\n";
 
+	unsigned long long Ordinal = 0;
 	for (auto Object : ObjectArray())
 	{
+		DumperDiagnostics::SetOrdinal(++Ordinal);
 		if (!bWithPathname)
 		{
 			DumpStream << std::format("[{:08X}] {{{}}} {}\n", Object.GetIndex(), Object.GetAddress(), Object.GetFullName());
@@ -437,8 +440,10 @@ void ObjectArray::DumpObjectsWithProperties(const fs::path& Path, bool bWithPath
 	DumpStream << (!Settings::Generator::GameVersion.empty() && !Settings::Generator::GameName.empty() ? (Settings::Generator::GameVersion + '-' + Settings::Generator::GameName) + "\n\n" : "");
 	DumpStream << "Count: " << Num() << "\n\n\n";
 
+	unsigned long long Ordinal = 0;
 	for (auto Object : ObjectArray())
 	{
+		DumperDiagnostics::SetOrdinal(++Ordinal);
 		if (!bWithPathname)
 		{
 			DumpStream << std::format("[{:08X}] {{{}}} {}\n", Object.GetIndex(), Object.GetAddress(), Object.GetFullName());

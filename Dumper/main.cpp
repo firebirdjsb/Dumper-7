@@ -9,6 +9,7 @@
 #include "Generators/DumpspaceGenerator.h"
 
 #include "Generators/Generator.h"
+#include "DumperDiagnostics.h"
 
 enum class EFortToastType : uint8
 {
@@ -30,15 +31,20 @@ DWORD MainThread(HMODULE Module)
 
 	std::cerr << "Initializing [Dumper-7]\n";
 
+	DumperDiagnostics::Install();
+	DumperDiagnostics::Mark("load settings");
 	Settings::Config::Load();
 	Settings::Config::DelayDumperStart();
 
 	std::cerr << "Started Generation [Dumper-7]!\n";
 	auto DumpStartTime = std::chrono::high_resolution_clock::now();
 
+	DumperDiagnostics::Mark("init engine core");
 	Generator::InitEngineCore();
+	DumperDiagnostics::Mark("init internal managers");
 	Generator::InitInternal();
 
+	DumperDiagnostics::Mark("fetch game version");
 	FetchGameNameAndVersion();
 
 	std::cerr << "GameName: " << Settings::Generator::GameName << "\n";
@@ -46,7 +52,9 @@ DWORD MainThread(HMODULE Module)
 
 	std::cerr << "FolderName: " << (Settings::Generator::GameVersion + '-' + Settings::Generator::GameName) << "\n\n";
 
+	DumperDiagnostics::Mark("start C++ generator");
 	Generator::Generate<CppGenerator>();
+	DumperDiagnostics::Mark("C++ generator completed");
 	Generator::Generate<MappingGenerator>();
 	Generator::Generate<IDAMappingGenerator>();
 	Generator::Generate<DumpspaceGenerator>();
