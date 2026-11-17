@@ -2337,7 +2337,21 @@ void CppGenerator::InitPredefinedMembers()
 	SortMembers(UFunctionPredefs.Members);
 	SortMembers(PredefinedMembers[ObjectArray::FindClassFast("Field").GetIndex()].Members);
 	SortMembers(PredefinedMembers[ObjectArray::FindClassFast("Enum").GetIndex()].Members);
-	SortMembers(PredefinedMembers[ObjectArray::FindClassFast("Struct").GetIndex()].Members);
+	// Some UE builds expose UStruct's reflected class as lowercase "struct".
+	// Never call GetIndex() on a null reflected class.
+	if (UEClass UStructClass = ObjectArray::FindClassFast("Struct"))
+	{
+		SortMembers(PredefinedMembers[UStructClass.GetIndex()].Members);
+	}
+	else if (UEClass LowercaseUStructClass = ObjectArray::FindClassFast("struct"))
+	{
+		std::cerr << "[D7-DIAG] Using lowercase reflected 'struct' for UStruct predefined members.\\n";
+		SortMembers(PredefinedMembers[LowercaseUStructClass.GetIndex()].Members);
+	}
+	else
+	{
+		std::cerr << "[D7-DIAG] Neither 'Struct' nor 'struct' class found; UStruct member sort skipped.\\n";
+	}
 	SortMembers(PredefinedMembers[ObjectArray::FindClassFast("Class").GetIndex()].Members);
 
 	SortMembers(PropertyMembers);
